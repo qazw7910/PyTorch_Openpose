@@ -120,11 +120,11 @@ def build_info_file(data_root, save_dir):
                     label = 'fall'
                 elif 'stand' in f:
                     label = 'stand'
-                elif 'sit' in f:
+                '''elif 'sit' in f:
                     label = 'sit'
                 elif 'crouch' in f:
                     label = 'crouch'
-
+'''
                 out += f'label={label}\n'
 
                 infofile.write(out)
@@ -153,4 +153,5 @@ def read_info_file(info_file_path):
 
 
 if __name__ == '__main__':
-    read_info_file(f'mod_code/openpose/code/extract/info.txt')
+    #read_info_file(f'extract/info.txt')
+    build_info_file('data','extract')
