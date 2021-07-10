@@ -75,8 +75,8 @@ class TSNDataSet(data.Dataset):
         return image_list
 
     def get_data_weight(self):
-        cnt = [0] * 4
-        labels = ['fall', 'stand', 'sit', 'crouch']
+        cnt = [0] * 2
+        labels = ['fall', 'stand']  # 'sit', 'crouch'
 
         for rec in self.video_record_list:
             idx = labels.index(rec.label)

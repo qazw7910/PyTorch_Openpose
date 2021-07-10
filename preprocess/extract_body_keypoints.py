@@ -6,10 +6,6 @@ import argparse
 
 from BODY_25 import BODY_25
 
-# Import Openpose (Windows/Ubuntu/OSX)
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(dir_path + '/../openpose/build/bin')
-os.environ['PATH'] = os.environ['PATH'] + ';' + dir_path + '/../openpose/build/x64/Release;' + dir_path + '/../openpose/build/bin;'
 
 import pyopenpose as op
 
@@ -210,7 +206,7 @@ if __name__ == '__main__':
     args = command_parser()
 
     params = dict()
-    params['model_folder'] = 'mod_code/openpose/models'
+    params['model_folder'] = 'bin/models'
     params['model_pose'] = 'BODY_25'
     params['number_people_max'] = 1
 #   https://yuanze.wang/posts/build-openpose-python-api/

@@ -105,7 +105,7 @@ train_transforms = transforms.Compose([Centralize(),
 
 val_transforms = transforms.Compose([NLCtoNCL()])
 
-dataset = BodyKeypointsDataset(keypoints, root_dir='mod_code/openpose/code/data', timesteps=50, transforms={'train': train_transforms, 'val': val_transforms},
+dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=50, transforms={'train': train_transforms, 'val': val_transforms},
                                pad_by_last=True)
 
 split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]

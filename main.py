@@ -11,7 +11,7 @@ from dataset import TSNDataSet
 
 
 def main():
-    info_list = read_info_file('mod_code/openpose/code/extract/info.txt')
+    info_list = read_info_file('extract/info.txt')
 
     batch_size = 32
     num_segments = 10
