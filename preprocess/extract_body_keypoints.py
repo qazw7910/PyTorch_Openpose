@@ -61,7 +61,7 @@ def is_good_video(features):
 
     # TODO write condition to define what is a good video.
     for point in selected_points:
-        if points_cnt[point.value] < seq_length * 0.1:  # 0.8
+        if points_cnt[point.value] < seq_length * 0.5:  # 0.8
             return False
 
     return True
