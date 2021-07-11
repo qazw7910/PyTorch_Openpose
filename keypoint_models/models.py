@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class Keypoint_LSTM(nn.Module):
-    #TODO num_classes=4
+    # TODO num_classes=4
     def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
         super(Keypoint_LSTM, self).__init__()
 
@@ -31,12 +31,16 @@ class Keypoint_LSTM(nn.Module):
 
         return output
 
-#https://blog.csdn.net/sunny_xsc1994/article/details/82969867
+
+# https://blog.csdn.net/sunny_xsc1994/article/details/82969867
+
 class Conv1D(nn.Module):
-    def __init__(self):
+    def __init__(self, signal_length: int, num_classes: int):
         super(Conv1D, self).__init__()
 
         self.num_kernel = 64
+        self.signal_length = signal_length
+        self.num_classes = num_classes
         self.conv = nn.Sequential(
             nn.Conv1d(30, self.num_kernel, 5, padding=2),
             nn.ReLU(inplace=True),
@@ -53,12 +57,12 @@ class Conv1D(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Dropout(0.8),
-            nn.Linear(self.num_kernel * 10, 64),
+            nn.Linear(self.num_kernel * self.signal_length // 45, 64),
             nn.ReLU(),
-            nn.Linear(64, 4),
+            nn.Linear(64, self.num_classes),
         )
 
     def forward(self, in_x):
         out = self.conv(in_x)
-        out = self.fc(out.view(-1, self.num_kernel * 10))
+        out = self.fc(out.reshape(in_x.size(0), -1))
         return out

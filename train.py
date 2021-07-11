@@ -105,7 +105,8 @@ train_transforms = transforms.Compose([Centralize(),
 
 val_transforms = transforms.Compose([NLCtoNCL()])
 
-dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=50, transforms={'train': train_transforms, 'val': val_transforms},
+time_steps = 50
+dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=time_steps, transforms={'train': train_transforms, 'val': val_transforms},
                                pad_by_last=True)
 
 split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]
@@ -113,6 +114,7 @@ train_dataset, val_dataset = torch.utils.data.random_split(dataset, split_length
 
 
 cnt_class = [0, 0]    #TODO cnt_class = [0, 0, 0, 0]
+num_classes = len(cnt_class)
 for data in train_dataset:
     cnt_class[data['label']] += 1
 
@@ -131,6 +133,6 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, sampler
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16)
 
 
-model = Conv1D()
+model = Conv1D(signal_length=time_steps, num_classes=num_classes)
 res = train_model(model, train_loader, val_loader, 250)
 print('best_val_acc:', res)
