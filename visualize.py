@@ -30,12 +30,14 @@ def draw_body_points(features, img_size=(640, 640, 3), zoom=None, shift=torch.Te
     features_copy += shift
 
     for pair in pairs:
-        pt1 = (features_copy[pair[0]][0] * img_size[0], features_copy[pair[0]][1] * img_size[0])
-        pt2 = (features_copy[pair[1]][0] * img_size[1], features_copy[pair[1]][1] * img_size[1])
+        pt1 = (int(features_copy[pair[0]][0] * img_size[0]), int(features_copy[pair[0]][1] * img_size[0]))
+        pt2 = (int(features_copy[pair[1]][0] * img_size[1]), int(features_copy[pair[1]][1] * img_size[1]))
         cv2.line(img, pt1, pt2, (0, 255, 255), 5)
 
     for i in range(len(features_copy)):
-        cv2.circle(img, (features_copy[i][0] * img_size[0], features_copy[i][1] * img_size[1]), 5, (0, 0, 255), -1)
+        cv2.circle(
+            img, (int(features_copy[i][0] * img_size[0]), int(features_copy[i][1] * img_size[1])), 5, (0, 0, 255), -1
+        )
 
     return img
 
@@ -53,7 +55,7 @@ torch.manual_seed(0)
 dataset = BodyKeypointsDataset(keypoints, root_dir='data/', timesteps=450,
                                pad_by_last=True)
 #改20
-data = dataset[20]
+data = dataset[9]
 X = data['feature']
 pi = math.acos(-1)
 
