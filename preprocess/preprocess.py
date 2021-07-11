@@ -153,5 +153,6 @@ def read_info_file(info_file_path):
 
 
 if __name__ == '__main__':
-    #read_info_file(f'extract/info.txt')
-    build_info_file('data','extract')
+
+    #build_info_file('video','extract')
+    read_info_file('extract/info.txt')

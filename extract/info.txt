@@ -1,0 +1,10 @@
+id=1,path=video\fall\fall1.mp4,num_frames=134,label=fall
+id=2,path=video\fall\fall2.mp4,num_frames=92,label=fall
+id=3,path=video\fall\fall6.mp4,num_frames=111,label=fall
+id=4,path=video\fall\fall8.mp4,num_frames=89,label=fall
+id=5,path=video\fall\fall9.mp4,num_frames=124,label=fall
+id=6,path=video\stand\stand1.mp4,num_frames=266,label=stand
+id=7,path=video\stand\stand2.mp4,num_frames=208,label=stand
+id=8,path=video\stand\stand3.mp4,num_frames=269,label=stand
+id=9,path=video\stand\stand5.mp4,num_frames=303,label=stand
+id=10,path=video\stand\stand6.mp4,num_frames=26,label=stand

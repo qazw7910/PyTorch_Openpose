@@ -38,7 +38,7 @@ class Conv1D(nn.Module):
 
         self.num_kernel = 64
         self.conv = nn.Sequential(
-            nn.Conv1d(14, self.num_kernel, 5, padding=2),
+            nn.Conv1d(30, self.num_kernel, 5, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool1d(5),
             nn.Conv1d(self.num_kernel, self.num_kernel, 5, padding=2),
