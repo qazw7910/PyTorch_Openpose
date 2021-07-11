@@ -41,6 +41,9 @@ class Conv1D(nn.Module):
         self.num_kernel = 64
         self.signal_length = signal_length
         self.num_classes = num_classes
+        if signal_length // 45 ==0:
+            raise ValueError(f'signal_length too small: {signal_length}')
+
         self.conv = nn.Sequential(
             nn.Conv1d(30, self.num_kernel, 5, padding=2),
             nn.ReLU(inplace=True),
