@@ -52,8 +52,10 @@ class BodyKeypointsDataset(Dataset):
     def _sample_middle_indices(self, total_length, timesteps):
         block_size = total_length // timesteps
         last_block_size = total_length - (timesteps - 1) * block_size
-
-        indices = list(range(block_size//2, total_length - last_block_size, block_size))
+        if block_size > 0:
+            indices = list(range(block_size//2, total_length - last_block_size, block_size))
+        else:
+            indices = []
         indices.append(block_size * (timesteps - 1) + last_block_size//2)
 
         return indices
