@@ -1,8 +1,8 @@
 matplotlib~=3.4.1
 numpy~=1.19.2
-opencv-contrib-python~=3.4.2.17
+opencv-contrib-python~=4.5.2.54
 pandas~=1.2.4
 Pillow~=8.1.0
-torch~=1.8.1
-torchaudio~=0.8.1
-torchvision~=0.9.1
+# torch>=1.8.1
+# torchaudio>=0.8.1
+# torchvision>=0.9.1
