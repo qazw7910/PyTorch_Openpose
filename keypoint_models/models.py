@@ -57,7 +57,7 @@ class Conv1D(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Dropout(0.8),
-            nn.Linear(self.num_kernel * self.signal_length // 45, 64),
+            nn.Linear(self.num_kernel * (self.signal_length // 45), 64),
             nn.ReLU(),
             nn.Linear(64, self.num_classes),
         )
