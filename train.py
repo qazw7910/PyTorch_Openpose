@@ -94,6 +94,7 @@ keypoints = [BODY_25.Nose, BODY_25.Neck, BODY_25.RShoulder, BODY_25.RElbow, BODY
              BODY_25.RHip, BODY_25.RKnee, BODY_25.RAnkle, BODY_25.LHip, BODY_25.LKnee,
              BODY_25.LAnkle]
 keypoints = [point.value for point in keypoints]
+
 num_feature = 2 * len(keypoints)
 
 torch.manual_seed(0)
@@ -113,7 +114,7 @@ split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]
 train_dataset, val_dataset = torch.utils.data.random_split(dataset, split_lengths)
 
 
-cnt_class = [0, 0]    #TODO cnt_class = [0, 0, 0, 0]
+cnt_class = [0, 0, 0, 0]    #TODO cnt_class = [0, 0, 0, 0]
 num_classes = len(cnt_class)
 for data in train_dataset:
     cnt_class[data['label']] += 1
