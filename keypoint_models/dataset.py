@@ -76,7 +76,7 @@ class BodyKeypointsDataset(Dataset):
         return data_tensor, label_tensor, data_lengths
 # TODO class_name:[fall,stand,...]
     def _get_label(self, data_dir):
-        class_name = ['fall','stand']
+        class_name = ['fall','stand','crouch','sit']
 
         for idx in range(len(class_name)):
             if class_name[idx] in data_dir:
