@@ -103,12 +103,12 @@ class TSNDataSet(data.Dataset):
         label = video_record.label
         if label == 'fall':
             label = 0
-        '''elif label == 'stand':
+        elif label == 'stand':
             label = 1
         elif label == 'sit':
             label = 2
-        else:
-            label = 3'''
+        elif label == 'crouch':
+            label = 3
 
         if self.transform is not None:
             processed_data = self.transform(image_list)
