@@ -71,7 +71,7 @@ def train_model(model, train_loader, val_loader, epoch):
             if phase == 'val':
                 best_val_acc = max(best_val_acc, acc)
 
-    '''for phase in ['train', 'val']:
+    for phase in ['train', 'val']:
         plt.plot(range(len(loss_history[phase])), loss_history[phase])
     plt.legend(['train', 'validation'])
     plt.xlabel('# of iterations')
@@ -84,7 +84,7 @@ def train_model(model, train_loader, val_loader, epoch):
     plt.legend(['train', 'validation'])
     plt.xlabel('# of iterations')
     plt.ylabel('accuracy')
-    plt.show()'''
+    plt.show()
 
     return best_val_acc
 
