@@ -120,11 +120,11 @@ def build_info_file(data_root, save_dir):
                     label = 'fall'
                 elif 'stand' in f:
                     label = 'stand'
-                '''elif 'sit' in f:
+                elif 'sit' in f:
                     label = 'sit'
                 elif 'crouch' in f:
                     label = 'crouch'
-'''
+
                 out += f'label={label}\n'
 
                 infofile.write(out)
