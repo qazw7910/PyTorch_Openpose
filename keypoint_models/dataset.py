@@ -74,7 +74,7 @@ class BodyKeypointsDataset(Dataset):
         label_tensor = torch.LongTensor(labels)
 
         return data_tensor, label_tensor, data_lengths
-# TODO class_name:[fall,stand,...]
+# TODO class_name:['fall','stand','crouch','sit']
     def _get_label(self, data_dir):
         class_name = ['fall','stand','crouch','sit']
 
