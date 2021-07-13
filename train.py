@@ -135,5 +135,5 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16)
 
 
 model = Conv1D(signal_length=time_steps, num_classes=num_classes)
-res = train_model(model, train_loader, val_loader, 250)
+res = train_model(model, train_loader, val_loader, 120)
 print('best_val_acc:', res)
