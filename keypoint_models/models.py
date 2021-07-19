@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Keypoint_LSTM(nn.Module):
     # TODO num_classes=4
-    def __init__(self, input_size, hidden_size, num_layers=1, num_classes=4, batch_first=True):
+    def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
         super(Keypoint_LSTM, self).__init__()
 
         self.hidden_size = hidden_size
