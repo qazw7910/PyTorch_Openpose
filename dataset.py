@@ -121,7 +121,7 @@ class TSNDataSet(data.Dataset):
 
 
 if __name__ == '__main__':
-    dataSet = TSNDataSet(info_file_path='mod_code/openpose/code/extract/info.txt', data_root='extract',
+    dataSet = TSNDataSet(info_file_path='extract/info.txt', data_root='extract',
                          num_segments=10, new_length=1, modality='RGB')
 
     print(len(dataSet))
