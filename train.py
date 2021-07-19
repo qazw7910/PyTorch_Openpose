@@ -114,7 +114,7 @@ split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]
 train_dataset, val_dataset = torch.utils.data.random_split(dataset, split_lengths)
 
 
-cnt_class = [0, 0, 0, 0]    #TODO cnt_class = [0, 0, 0, 0]
+cnt_class = [0, 0]    #TODO cnt_class = [0, 0, 0, 0]
 num_classes = len(cnt_class)
 for data in train_dataset:
     cnt_class[data['label']] += 1
