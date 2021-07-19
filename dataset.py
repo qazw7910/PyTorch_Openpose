@@ -105,10 +105,10 @@ class TSNDataSet(data.Dataset):
             label = 0
         elif label == 'stand':
             label = 1
-        elif label == 'sit':
+        '''elif label == 'sit':
             label = 2
         elif label == 'crouch':
-            label = 3
+            label = 3'''
 
         if self.transform is not None:
             processed_data = self.transform(image_list)
