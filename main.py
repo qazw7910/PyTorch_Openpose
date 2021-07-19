@@ -27,7 +27,7 @@ def main():
     train_info_list = [info_list[idx] for idx in randidx[:train_sample_size]]
 
     train_dataset = TSNDataSet(info_list=train_info_list,
-                               data_root='mod_code/openpose/code/extract/info.txt',
+                               data_root='extract/info.txt',
                                num_segments=num_segments,
                                new_length=new_length,
                                modality=modality,
