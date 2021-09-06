@@ -1,6 +1,6 @@
 import os
 
-folder = '1100831CUT'
+folder = 'video/fall'
 count = 1
 
 for file_name in os.listdir(folder):
@@ -11,7 +11,7 @@ for file_name in os.listdir(folder):
     destination = "fall" + str(count) + ".mp4"
 
     #os.rename
-    #在Linux或者OS X中，使用绝对路径打开文件的时候应该使用斜杠/，在Windows中的时候，应该使用反斜杠\
+    #In Linux or OS X，use absolutly path to open the file should use slash: '/' . In Windows,should use reverse slash: '\'
     os.rename(f'{folder}\{source}', f'{folder}\{destination}')
     count += 1
 

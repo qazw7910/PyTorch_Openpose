@@ -106,7 +106,7 @@ train_transforms = transforms.Compose([Centralize(),
 
 val_transforms = transforms.Compose([NLCtoNCL()])
 
-time_steps = 50
+time_steps = 45
 dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=time_steps, transforms={'train': train_transforms, 'val': val_transforms},
                                pad_by_last=True)
 
@@ -137,3 +137,8 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16)
 model = Conv1D(signal_length=time_steps, num_classes=num_classes)
 res = train_model(model, train_loader, val_loader, 120)
 print('best_val_acc:', res)
+
+'''torch.save(model.state_dict(), 'pt_model/fall.pth')
+model = Conv1D(signal_length=time_steps, num_classes=num_classes)
+model.load_state_dict(torch.load('pt_model/fall.pth'))
+model.eval()'''
