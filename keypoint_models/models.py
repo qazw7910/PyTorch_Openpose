@@ -11,8 +11,8 @@ class Keypoint_LSTM(nn.Module):
         self.num_layers = num_layers
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
-                            batch_first=batch_first, dropout=0.3)
-        self.drop = nn.Dropout(0.)
+                            batch_first=batch_first)  #input_size=30, hidden_size=64,
+        self.drop = nn.Dropout(0.5)
         self.nn = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
             nn.Linear(hidden_size, hidden_size),
@@ -26,7 +26,7 @@ class Keypoint_LSTM(nn.Module):
         '''
         packed_output, (ht, ct) = self.lstm(packed_input)
 
-        output = self.drop(ht[-1])
+        output = self.drop(packed_output[:, -1])
         output = self.nn(output)
 
         return output
@@ -57,6 +57,8 @@ class Conv1D(nn.Module):
             nn.Conv1d(self.num_kernel, self.num_kernel, 3, padding=1),
             nn.ReLU(inplace=True),
         )
+
+
 
         self.fc = nn.Sequential(
             nn.Dropout(0.8),
