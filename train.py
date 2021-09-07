@@ -10,16 +10,16 @@ from keypoint_models.transform import *
 from preprocess.BODY_25 import BODY_25
 
 
-def train_model(model, train_loader, val_loader, epoch):
+def train_model(model, train_loader, val_loader, test_loader, epoch):  #test loader
     model = model.cuda()
     # optimizer = optim.SGD(model.parameters(), lr=0.0003, momentum=0, weight_decay=0)
     optimizer = optim.Adam(model.parameters(), lr=0.00015, weight_decay=0.001)
 
     criterion = torch.nn.CrossEntropyLoss()
 
-    loss_history = {'train': [], 'val': []}
-    acc_history = {'train': [], 'val': []}
-    dataloaders = {'train': train_loader, 'val': val_loader}
+    loss_history = {'train': [], 'val': [], 'test': []}
+    acc_history = {'train': [], 'val': [], 'test': []}
+    dataloaders = {'train': train_loader, 'val': val_loader , 'test': test_loader}
     best_val_acc = 0
 
     for i in range(epoch):
@@ -28,7 +28,7 @@ def train_model(model, train_loader, val_loader, epoch):
         elif i == 800:
             optimizer = optim.Adam(model.parameters(), lr=0.00005)
 
-        for phase in ['train', 'val']:
+        for phase in ['train', 'val', 'test']:
             epoch_loss = 0.0
             epoch_correct = 0
             num_data = 0
@@ -57,31 +57,31 @@ def train_model(model, train_loader, val_loader, epoch):
                         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
                         optimizer.step()
 
-                _, pred = output.max(dim=1)
+                pred = output.argmax(dim=1)
 
                 num_data += len(y)
                 epoch_correct += (pred == y).sum().item()
                 epoch_loss += loss.item() * len(y)
 
             loss = epoch_loss / num_data
-            acc = epoch_correct / num_data * 100
+            acc = epoch_correct / num_data *100
             loss_history[phase].append(loss)
             acc_history[phase].append(acc)
 
-            if phase == 'val':
+            if phase in ['val', 'test']:
                 best_val_acc = max(best_val_acc, acc)
 
-    for phase in ['train', 'val']:
+    for phase in ['train', 'val', 'test']:
         plt.plot(range(len(loss_history[phase])), loss_history[phase])
-    plt.legend(['train', 'validation'])
+    plt.legend(['train', 'validation', 'test'])
     plt.xlabel('# of iterations')
     plt.ylabel('loss')
     plt.show()
 
     plt.clf()
-    for phase in ['train', 'val']:
+    for phase in ['train', 'val', 'test']:
         plt.plot(range(len(acc_history[phase])), acc_history[phase])
-    plt.legend(['train', 'validation'])
+    plt.legend(['train', 'validation', 'test'])
     plt.xlabel('# of iterations')
     plt.ylabel('accuracy')
     plt.show()
@@ -95,23 +95,28 @@ keypoints = [BODY_25.Nose, BODY_25.Neck, BODY_25.RShoulder, BODY_25.RElbow, BODY
              BODY_25.LAnkle]
 keypoints = [point.value for point in keypoints]
 
-num_feature = 2 * len(keypoints)
+num_feature = 2 * len(keypoints)  # because(X,Y) so feature *2
 
 torch.manual_seed(0)
 
 train_transforms = transforms.Compose([Centralize(),
                                        Scale(0.7, 1.3),
-                                       RandomShift(-0.3, 0.3, -0.3, 0.3),
-                                       NLCtoNCL()])
+                                       RandomShift(-0.3, 0.3, -0.3, 0.3)
+                                       ]) #for lstm
 
-val_transforms = transforms.Compose([NLCtoNCL()])
+val_transforms = transforms.Compose([])
+
+test_transforms = transforms.Compose([])
 
 time_steps = 45
-dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=time_steps, transforms={'train': train_transforms, 'val': val_transforms},
+dataset = BodyKeypointsDataset(keypoints, root_dir='data', timesteps=time_steps, transforms={'train': train_transforms, 'val': val_transforms, 'test':test_transforms},
                                pad_by_last=True)
 
-split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]
-train_dataset, val_dataset = torch.utils.data.random_split(dataset, split_lengths)
+# split_lengths = [len(dataset) // 2, len(dataset) - len(dataset) // 2]
+train_size =int(len(dataset) * 0.5)
+val_size =int(len(dataset) * 0.3)
+test_size =int(len(dataset)) - train_size - val_size
+train_dataset, val_dataset ,test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
 
 
 cnt_class = [0, 0]    #TODO cnt_class = [0, 0, 0, 0]
@@ -132,13 +137,21 @@ sampler = torch.utils.data.WeightedRandomSampler(weights=data_weight, num_sample
 
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, sampler=sampler)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=16)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=16)
 
 
-model = Conv1D(signal_length=time_steps, num_classes=num_classes)
-res = train_model(model, train_loader, val_loader, 120)
+# model = Conv1D(signal_length=time_steps, num_classes=num_classes)
+model = Keypoint_LSTM(
+    input_size=30,
+    hidden_size=64,
+    num_layers=1,
+    num_classes=2
+)
+res = train_model(model, train_loader, val_loader, test_loader, 18)
 print('best_val_acc:', res)
 
-'''torch.save(model.state_dict(), 'pt_model/fall.pth')
-model = Conv1D(signal_length=time_steps, num_classes=num_classes)
+torch.save(model.state_dict(), 'pt_model/fall.pth')
+
+'''model = Conv1D(signal_length=time_steps, num_classes=num_classes)
 model.load_state_dict(torch.load('pt_model/fall.pth'))
 model.eval()'''
