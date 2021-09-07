@@ -23,7 +23,7 @@ class BodyKeypointsDataset(Dataset):
 
         if self.phase == 'train':
             indices = self._random_sample_indices(len(ret_data), self.timesteps)
-        elif self.phase == 'val':
+        elif self.phase == 'val' or 'test':  #new test_dataset
             indices = self._sample_middle_indices(len(ret_data), self.timesteps)
         else:
             indices = list(range(len(ret_data)))
