@@ -164,14 +164,14 @@ def extract(video_path, show_video=False):
         success, frame = cap.read()
         if not success:
             print('retrieve frame from', file_path, 'failed.', file=sys.stderr)
-            sys.exit(-1)    #停止繼續執行
+            sys.exit(-1)    #if retrieve fail break out
 
         datum.cvInputData = frame
         op_wrapper.emplaceAndPop([datum])
-
+        # https://www.codenong.com/9afe46be287316e8bb58/ op_wrapper.emplaceAndPop instruction for use
         # sometimes model doesn't detect any person in a frame,
         # so copy keypoints to array only when it detects a person
-        # and the keypoints we want is confidential enough
+        # and the keypoints we are want confidential enough
         if len(datum.poseKeypoints.shape) > 0 and is_confidential_candidate(datum.poseKeypoints[0], selected_points,
                                                                             threshold=0.3):
             # index represents n-th person
