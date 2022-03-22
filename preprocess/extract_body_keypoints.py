@@ -61,7 +61,7 @@ def is_good_video(features):
 
     # TODO write condition to define what is a good video.
     for point in selected_points:
-        if points_cnt[point.value] < seq_length * 0.2:  # 0.8
+        if points_cnt[point.value] < seq_length * 0.1:  # 0.8
             return False
 
     return True
@@ -201,6 +201,13 @@ def normalization(features, shape):
 
     return norm_features
 
+def flip(features):
+    flip_features = np.array(features)
+
+    flip_features[:, :, 1] = (flip_features[:, :, 1] * -1) + 1
+
+    return flip_features
+
 
 if __name__ == '__main__':
     args = command_parser()
@@ -209,6 +216,7 @@ if __name__ == '__main__':
     params['model_folder'] = 'bin/models'
     params['model_pose'] = 'BODY_25'
     params['number_people_max'] = 1
+
 #   https://yuanze.wang/posts/build-openpose-python-api/
     op_wrapper = op.WrapperPython()
     op_wrapper.configure(params)
@@ -267,6 +275,13 @@ if __name__ == '__main__':
 
                     save_path = os.path.join(args.save_dir, f'{file_cnt:04d}.npy')
                     np.save(save_path, norm_features)
+
+                    file_cnt += 1
+                    print('good video.')
+
+                    flip_norm_features = flip(norm_features)
+                    save_path = os.path.join(args.save_dir, f'{file_cnt:04d}.npy')
+                    np.save(save_path, flip_norm_features)
 
                     file_cnt += 1
                     print('good video.')
