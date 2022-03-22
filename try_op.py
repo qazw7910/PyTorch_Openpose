@@ -83,10 +83,11 @@ class main :
             op_wrapper.configure(self.op_params)
             op_wrapper.start()
 
-            time_step = 0
+            model_time_step = 20
+            realtime_time_step = 0
             num_keypoint = 25
             feature_array = np.zeros([45, num_keypoint, 3], np.float32)
-            class_name = ['fall', 'stand']
+            class_name = ['fall', 'normal']
             state = 'unknown'
             choosed_confidence = 0
             while self.stream.isOpened():
@@ -113,15 +114,15 @@ class main :
 
                         # catch keypoints and recognize state
                         for gpuId in range(0, self.num_gpus):
-                            if time_step < 45:
+                            if realtime_time_step < model_time_step:
                                 datum = op.Datum()
                                 datum.cvInputData = frame
                                 op_wrapper.emplaceAndPop([datum])
 
                                 # add keypoint to feature_array[frame_cnt, :, :]
                                 keypoints = datum.poseKeypoints[0]
-                                feature_array[time_step, :, :] = keypoints
-                                time_step += 1
+                                feature_array[realtime_time_step, :, :] = keypoints
+                                realtime_time_step += 1
 
                             else:
                                 # delivery norm_keypoints_buffer to model recognize and return body state
@@ -139,7 +140,7 @@ class main :
 
                                 # load model and convert model to eval() mode
                                 model = Keypoint_LSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
-                                model.load_state_dict(torch.load('pt_model/fall.pth'))
+                                model.load_state_dict(torch.load(f'pt_model/fall_{model_time_step}_fps.pth'))
                                 model.eval().cuda()
 
                                 # model output state
@@ -153,10 +154,10 @@ class main :
                                     state = 'unknown'
 
                                 # after delivery feature_array need to clear
-                                feature_array = np.zeros([45, num_keypoint, 3], np.float32)
-                                time_step = 0
+                                feature_array = np.zeros([realtime_time_step, num_keypoint, 3], np.float32)
+                                realtime_time_step = 0
 
-                        #Read and push images into OpenPose wrapper
+                        # Read and push images into OpenPose wrapper
                         for gpuId in range(0, self.num_gpus):
                             image_id = image_base_id + gpuId
 
