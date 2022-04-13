@@ -12,12 +12,11 @@ class Keypoint_LSTM(nn.Module):
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
                             batch_first=batch_first)  #input_size=30, hidden_size=64,
-        self.drop = nn.Dropout(0.5)
-        self.nn = nn.Sequential(OrderedDict([
-            ('hidden_layer',nn.Linear(hidden_size, hidden_size)),
-            ('hidden_layer',nn.Linear(hidden_size, hidden_size)),
-            ('output_layer',nn.Linear(hidden_size, num_classes))
-        ])
+        self.drop = nn.Dropout(0.3)
+        self.nn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden_size, num_classes)
+
         )
 
     def forward(self, packed_input):

@@ -1,10 +1,8 @@
-import os
-import sys
+import env_path
 import cv2
 import numpy as np
 import argparse
 import torch
-import torchvision.models as models
 from keypoint_models.models import Keypoint_LSTM
 
 from preprocess.BODY_25 import BODY_25
@@ -12,7 +10,6 @@ from preprocess.BODY_25 import BODY_25
 import pyopenpose as op
 from imutils.video import FPS
 import time
-
 
 
 def fill_null(features):
@@ -61,14 +58,13 @@ class main :
         self.num_gpus = self.op_params['num_gpu'] if'num_gpu' in self.op_params else op.get_gpu_number()
 
     def set_op_params(self):
-        params = dict()
-        params['model_folder'] = 'bin/models'
-        params['model_pose'] = 'BODY_25'
-        params['frame_step'] = 2
-        # params['net_resolution'] ='-1x368'
-        params['process_real_time'] = 'true'
-        params['render_threshold'] = 0.5
-        return params
+        return dict(
+            model_folder='bin/models',
+            model_pose='BODY_25',
+            frame_step=2,
+            process_real_time='true',
+            render_threshold=0.5
+        )
 
     def start(self):
         buffer = list()
@@ -78,145 +74,144 @@ class main :
         start =time.time()
 
 
-        try:
-            op_wrapper = op.WrapperPython()
-            op_wrapper.configure(self.op_params)
-            op_wrapper.start()
+        op_wrapper = op.WrapperPython()
+        op_wrapper.configure(self.op_params)
+        op_wrapper.start()
 
-            time_step = 0
-            num_keypoint = 25
-            feature_array = np.zeros([45, num_keypoint, 3], np.float32)
-            class_name = ['fall', 'stand']
-            state = 'unknown'
-            choosed_confidence = 0
-            while self.stream.isOpened():
-                sucess, frame = self.stream.read()
+        model_time_step = 20
+        real_time_step = 0
+        num_keypoint = 25
+        feature_array = np.zeros([45, num_keypoint, 3], np.float32)
+        class_name = ['fall', 'stand']
+        state = 'unknown'
+        choosed_confidence = 0
+        while self.stream.isOpened():
+            sucess, frame = self.stream.read()
+            fps = self.stream.get(cv2.CAP_PROP_FPS)
+
+            if frame is None or not sucess:
+                print("Error while open capture device")
+                break
+
+            buffer.append(frame)
+
+            if len(buffer) >= self.num_gpus:
+
+                for image_base_id in range(0, len(buffer), self.num_gpus):
+                    datums = []
+                    video_info = {}
+                    W = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+                    H = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                    video_info['W'] = int(W)
+                    video_info['H'] = int(H)
 
 
-                if frame is None or not sucess:
-                    print("Error while open capture device")
-                    break
 
-                buffer.append(frame)
+                    # catch keypoints and recognize state
+                    for gpuId in range(0, self.num_gpus):
+                        if real_time_step < model_time_step:
+                            datum = op.Datum()
+                            datum.cvInputData = frame
+                            op_wrapper.emplaceAndPop(op.VectorDatum([datum]))
 
-                if len(buffer) >= self.num_gpus:
+                            # add keypoint to feature_array[frame_cnt, :, :]
+                            keypoints = datum.poseKeypoints[0]
+                            feature_array[real_time_step, :, :] = keypoints
+                            real_time_step += 1
 
-                    for image_base_id in range(0, len(buffer), self.num_gpus):
-                        datums = []
-                        video_info = {}
-                        W = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
-                        H = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                        video_info['W'] = int(W)
-                        video_info['H'] = int(H)
+                        else:
+                            # delivery norm_keypoints_buffer to model recognize and return body state
+                            fill_features = fill_null(feature_array)
+                            norm_features = normalization(fill_features, (video_info['W'], video_info['H']))
 
+                            # filter norm_features keypoint and reshape
+                            seq_length = len(norm_features)
+                            filter_norm_features = norm_features[:, selected_points_index,:2]
+                            filter_norm_features = filter_norm_features.reshape((seq_length, len(selected_points)*2))
 
+                            # convert filter_norm_features to filter_norm_features_tensor also put in cuda
+                            filter_norm_features_tensor = torch.from_numpy(filter_norm_features).type(torch.float32)
+                            X = filter_norm_features_tensor.cuda().reshape(1,*filter_norm_features_tensor.size())
 
-                        # catch keypoints and recognize state
-                        for gpuId in range(0, self.num_gpus):
-                            if time_step < 45:
-                                datum = op.Datum()
-                                datum.cvInputData = frame
-                                op_wrapper.emplaceAndPop([datum])
+                            # load model and convert model to eval() mode
+                            model = Keypoint_LSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
+                            model.load_state_dict(torch.load(f'pt_model/fall_{model_time_step}_fps.pth'))
+                            model.eval().cuda()
 
-                                # add keypoint to feature_array[frame_cnt, :, :]
-                                keypoints = datum.poseKeypoints[0]
-                                feature_array[time_step, :, :] = keypoints
-                                time_step += 1
-
+                            # model output state
+                            output = model(X)
+                            confidence = torch.softmax(output, dim=1)
+                            idx = confidence.argmax(dim=1)[0].item()
+                            choosed_confidence = confidence[0,idx]
+                            if choosed_confidence >= confidence_threshold:
+                                state = class_name[idx]
                             else:
-                                # delivery norm_keypoints_buffer to model recognize and return body state
-                                fill_features = fill_null(feature_array)
-                                norm_features = normalization(fill_features, (video_info['W'], video_info['H']))
+                                state = 'unknown'
 
-                                # filter norm_features keypoint and reshape
-                                seq_length = len(norm_features)
-                                filter_norm_features = norm_features[:, selected_points_index,:2]
-                                filter_norm_features = filter_norm_features.reshape((seq_length, len(selected_points)*2))
+                            # after delivery feature_array need to clear
+                            feature_array = np.zeros([45, num_keypoint, 3], np.float32)
+                            real_time_step = 0
 
-                                # convert filter_norm_features to filter_norm_features_tensor also put in cuda
-                                filter_norm_features_tensor = torch.from_numpy(filter_norm_features).type(torch.float32)
-                                X = filter_norm_features_tensor.cuda().reshape(1,*filter_norm_features_tensor.size())
+                    #Read and push images into OpenPose wrapper
+                    for gpuId in range(0, self.num_gpus):
+                        image_id = image_base_id + gpuId
 
-                                # load model and convert model to eval() mode
-                                model = Keypoint_LSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
-                                model.load_state_dict(torch.load('pt_model/fall.pth'))
-                                model.eval().cuda()
+                        if image_id < len(buffer):
+                            frame = buffer[image_id]
+                            datum = op.Datum()
+                            datum.cvInputData = frame
+                            datums.append(datum)
+                            op_wrapper.waitAndEmplace(op.VectorDatum([datums[-1]]))
 
-                                # model output state
-                                output = model(X)
-                                confidence = torch.softmax(output, dim=1)
-                                idx = confidence.argmax(dim=1)[0].item()
-                                choosed_confidence = confidence[0,idx]
-                                if choosed_confidence >= confidence_threshold:
-                                    state = class_name[idx]
-                                else:
-                                    state = 'unknown'
+                    # Retrieve processed results from OpenPose wrapper
+                    for gpuId in range(0, self.num_gpus):
+                        image_id = image_id + gpuId
 
-                                # after delivery feature_array need to clear
-                                feature_array = np.zeros([45, num_keypoint, 3], np.float32)
-                                time_step = 0
+                        if image_id < len(buffer):
+                            datum = datums[gpuId]
+                            op_wrapper.waitAndPop(op.VectorDatum([datum]))
 
-                        #Read and push images into OpenPose wrapper
-                        for gpuId in range(0, self.num_gpus):
-                            image_id = image_base_id + gpuId
+                            op_frame = datum.cvOutputData
 
-                            if image_id < len(buffer):
-                                frame = buffer[image_id]
-                                datum = op.Datum()
-                                datum.cvInputData = frame
-                                datums.append(datum)
-                                op_wrapper.waitAndEmplace([datums[-1]])
+                            fps.update()
+                            fps.stop()
 
-                        # Retrieve processed results from OpenPose wrapper
-                        for gpuId in range(0, self.num_gpus):
-                            image_id = image_id + gpuId
+                            cv2.putText(img=op_frame, text='NUM_GPU: {}'.format(self.num_gpus), org=(30,50),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255,0,0), thickness=2)
+                            cv2.putText(img=op_frame, text='FPS(): {0:.2f}'.format(fps.fps()), org=(30,90),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0,255,0), thickness=2)
+                            #TODO STATE = after model recognize
+                            cv2.putText(img=op_frame, text=f'STATE: {state}' ,org=(30,130),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0,0,255), thickness=2)
+                            cv2.putText(img=op_frame, text=f'CONF: {choosed_confidence: .6f}', org=(30, 160),
+                                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 255),
+                                        thickness=2)
 
-                            if image_id < len(buffer):
-                                datum = datums[gpuId]
-                                op_wrapper.waitAndPop([datum])
+                            op_frame = cv2.resize(src=op_frame, dsize=(0,0), fx=1, fy=1, interpolation=cv2.INTER_AREA)
 
-                                op_frame = datum.cvOutputData
+                            cv2.imshow('fall recognizer', op_frame)
 
-                                fps.update()
-                                fps.stop()
+                            key = cv2.waitKey(1) & 0xFF
+                            if key ==ord('q') or key == 27:
+                                print('closing program')
+                                exit = True
+                                break
 
-                                cv2.putText(img=op_frame, text='NUM_GPU: {}'.format(self.num_gpus), org=(30,50),
-                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255,0,0), thickness=2)
-                                cv2.putText(img=op_frame, text='FPS(): {0:.2f}'.format(fps.fps()), org=(30,90),
-                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0,255,0), thickness=2)
-                                #TODO STATE = after model recognize
-                                cv2.putText(img=op_frame, text=f'STATE: {state}' ,org=(30,130),
-                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0,0,255), thickness=2)
-                                cv2.putText(img=op_frame, text=f'CONF: {choosed_confidence: .6f}', org=(30, 160),
-                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 255),
-                                            thickness=2)
+                    if exit:
+                        break
 
-                                op_frame = cv2.resize(src=op_frame, dsize=(0,0), fx=1, fy=1, interpolation=cv2.INTER_AREA)
+                buffer.clear()
 
-                                cv2.imshow('fall recognizer', op_frame)
+            if exit:
+                break
+            cv2.waitKey(0)
+            break
 
-                                key = cv2.waitKey(1) & 0xFF
-                                if key ==ord('q') or key == 27:
-                                    print('closing program')
-                                    exit = True
-                                    break
+        end = time.time()
+        print("OpenPose demo successfully finished. Total time: " + str(end - start) + " seconds")
+        self.stream.release()
+        cv2.destroyAllWindows()
 
-                        if exit:
-                            break
-
-                    buffer.clear()
-
-                if exit:
-                    break
-
-            end = time.time()
-            print("OpenPose demo successfully finished. Total time: " + str(end - start) + " seconds")
-            self.stream.release()
-            cv2.destroyAllWindows()
-
-
-        except Exception as e:
-            print('op_wrapper error', e)
 
 
 
