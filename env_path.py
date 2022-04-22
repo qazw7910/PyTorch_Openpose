@@ -1,8 +1,10 @@
 import sys
 from pathlib import Path
 
+from typing import List
 
-def _to_str_path(paths: list[Path]) -> list[str]:
+
+def _to_str_path(paths: List[Path]) -> List[str]:
     return [str(path) for path in paths]
 
 
