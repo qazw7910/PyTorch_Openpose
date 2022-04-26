@@ -141,7 +141,7 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=16)
 
 
 # model = Conv1D(signal_length=time_steps, num_classes=num_classes)
-model = Keypoint_LSTM(
+model = KeypointLSTM(
     input_size=30,
     hidden_size=64,
     num_layers=1,

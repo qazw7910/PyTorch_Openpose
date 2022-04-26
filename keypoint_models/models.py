@@ -1,17 +1,16 @@
-import torch
 import torch.nn as nn
-from collections import OrderedDict
 
-class Keypoint_LSTM(nn.Module):
+
+class KeypointLSTM(nn.Module):
     # TODO num_classes=4
     def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
-        super(Keypoint_LSTM, self).__init__()
+        super().__init__()
 
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
-                            batch_first=batch_first)  #input_size=30, hidden_size=64,
+                            batch_first=batch_first)  # input_size=30, hidden_size=64,
         self.drop = nn.Dropout(0.3)
         self.nn = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
@@ -24,7 +23,7 @@ class Keypoint_LSTM(nn.Module):
         h0 = torch.rand(self.hidden_size, self.num_layers)
         c0 = torch.rand(self.hidden_size, self.num_layers)
         '''
-        packed_output, (ht, ct) = self.lstm(packed_input)
+        packed_output, _ = self.lstm(packed_input)
 
         output = self.drop(packed_output[:, -1])
         output = self.nn(output)
@@ -34,6 +33,35 @@ class Keypoint_LSTM(nn.Module):
 
 # https://blog.csdn.net/sunny_xsc1994/article/details/82969867
 
+class KeypointGRU(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
+        super().__init__()
+
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.gru = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
+                          batch_first=batch_first)  # input_size=30, hidden_size=64,
+        self.drop = nn.Dropout(0.3)
+        self.nn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden_size, num_classes)
+
+        )
+
+    def forward(self, packed_input):
+        '''
+        h0 = torch.rand(self.hidden_size, self.num_layers)
+        c0 = torch.rand(self.hidden_size, self.num_layers)
+        '''
+        packed_output, _ = self.gru(packed_input)
+
+        output = self.drop(packed_output[:, -1])
+        output = self.nn(output)
+
+        return output
+
+
 class Conv1D(nn.Module):
     def __init__(self, signal_length: int, num_classes: int):
         super(Conv1D, self).__init__()
@@ -41,7 +69,7 @@ class Conv1D(nn.Module):
         self.num_kernel = 64
         self.signal_length = signal_length
         self.num_classes = num_classes
-        if signal_length // 45 ==0:
+        if signal_length // 45 == 0:
             raise ValueError(f'signal_length too small: {signal_length}')
 
         self.conv = nn.Sequential(
@@ -57,8 +85,6 @@ class Conv1D(nn.Module):
             nn.Conv1d(self.num_kernel, self.num_kernel, 3, padding=1),
             nn.ReLU(inplace=True),
         )
-
-
 
         self.fc = nn.Sequential(
             nn.Dropout(0.8),

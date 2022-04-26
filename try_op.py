@@ -7,7 +7,7 @@ import argparse
 import torch
 
 from cv2_utils import get_frame_from_cap
-from keypoint_models.models import Keypoint_LSTM
+from keypoint_models.models import KeypointLSTM
 
 from preprocess.BODY_25 import BODY_25
 # https://github.com/CMU-Perceptual-Computing-Lab/openpose/issues/1394
@@ -92,7 +92,7 @@ class main:
         model_time_step = 20
         real_time_step = 0
         num_keypoint = 25
-        feature_array = np.zeros([45, num_keypoint, 3], np.float32)
+        feature_array = np.zeros([model_time_step, num_keypoint, 3], np.float32)
         class_name = ['fall', 'stand']
         state = 'unknown'
         choosed_confidence = 0
@@ -102,6 +102,11 @@ class main:
         H = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
         video_info['W'] = int(W)
         video_info['H'] = int(H)
+
+        # load model and convert model to eval() mode
+        model = KeypointLSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
+        model.load_state_dict(torch.load(f'pt_model/fall_{model_time_step}_fps.pth'))
+        model.eval().cuda()
 
         for frame in get_frame_from_cap(self.stream):
             # catch keypoints and recognize state
@@ -128,11 +133,6 @@ class main:
                     filter_norm_features_tensor = torch.from_numpy(filter_norm_features).type(torch.float32)
                     X = filter_norm_features_tensor.cuda().reshape(1, *filter_norm_features_tensor.size())
 
-                    # load model and convert model to eval() mode
-                    model = Keypoint_LSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
-                    model.load_state_dict(torch.load(f'pt_model/fall_{model_time_step}_fps.pth'))
-                    model.eval().cuda()
-
                     # model output state
                     output = model(X)
                     confidence = torch.softmax(output, dim=1)
@@ -144,7 +144,7 @@ class main:
                         state = 'unknown'
 
                     # after delivery feature_array need to clear
-                    feature_array = np.zeros([45, num_keypoint, 3], np.float32)
+                    feature_array = np.zeros([model_time_step, num_keypoint, 3], np.float32)
                     real_time_step = 0
                 else:
                     real_time_step += 1

@@ -6,7 +6,7 @@ import argparse
 import torch
 import PySimpleGUI as sg
 import torchvision.models as models
-from keypoint_models.models import Keypoint_LSTM
+from keypoint_models.models import KeypointLSTM
 
 from preprocess.BODY_25 import BODY_25
 # https://github.com/CMU-Perceptual-Computing-Lab/openpose/issues/1394
@@ -166,7 +166,7 @@ class main :
                                     X = filter_norm_features_tensor.cuda().reshape(1,*filter_norm_features_tensor.size())
 
                                     # load model and convert model to eval() mode
-                                    model = Keypoint_LSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
+                                    model = KeypointLSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
                                     model.load_state_dict(torch.load('pt_model/fall_10_fps.pth'))
                                     model.eval().cuda()
 
