@@ -1,5 +1,10 @@
-import screeninfo
+from pathlib import Path
 
+import screeninfo
+from torch2trt import TRTModule
+
+# DO NOT REMOVE THIS IMPORT STATEMENT
+# It sets the PYTHONPATH will be used.
 import env_path
 import cv2
 import numpy as np
@@ -14,6 +19,8 @@ from preprocess.BODY_25 import BODY_25
 import pyopenpose as op
 from imutils.video import FPS
 import time
+
+import logging
 
 
 def fill_null(features):
@@ -56,13 +63,15 @@ def normalization(features, shape):
     return norm_features
 
 
-class main:
+class Main:
     winname = 'fall recognizer'
 
-    def __init__(self, source):
+    def __init__(self, source, use_trt):
+        self.use_trt = use_trt
         self.op_params = self.set_op_params()
         self.stream = cv2.VideoCapture(int(source))
         self.num_gpus = self.op_params['num_gpu']
+        self.model_time_step = 20
 
     def set_op_params(self):
         return dict(
@@ -78,7 +87,7 @@ class main:
     def start(self):
         cv2.namedWindow(self.winname, cv2.WINDOW_KEEPRATIO)
         monitor = screeninfo.get_monitors()[0]
-        window_width = monitor.width * 3/5
+        window_width = monitor.width * 3 / 5
         cv2.resizeWindow(self.winname, int(window_width), int(window_width * monitor.height / monitor.width))
 
         fps = FPS().start()
@@ -89,10 +98,9 @@ class main:
         op_wrapper.configure(self.op_params)
         op_wrapper.start()
 
-        model_time_step = 20
         real_time_step = 0
         num_keypoint = 25
-        feature_array = np.zeros([model_time_step, num_keypoint, 3], np.float32)
+        feature_array = np.zeros([self.model_time_step, num_keypoint, 3], np.float32)
         class_name = ['fall', 'stand']
         state = 'unknown'
         choosed_confidence = 0
@@ -104,9 +112,7 @@ class main:
         video_info['H'] = int(H)
 
         # load model and convert model to eval() mode
-        model = KeypointLSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
-        model.load_state_dict(torch.load(f'pt_model/fall_{model_time_step}_fps.pth'))
-        model.eval().cuda()
+        model = self._get_model()
 
         for frame in get_frame_from_cap(self.stream):
             # catch keypoints and recognize state
@@ -119,7 +125,7 @@ class main:
                 keypoints = datum.poseKeypoints[0]
                 feature_array[real_time_step, :, :] = keypoints
 
-                if real_time_step == model_time_step - 1:
+                if real_time_step == self.model_time_step - 1:
                     # delivery norm_keypoints_buffer to model recognize and return body state
                     fill_features = fill_null(feature_array)
                     norm_features = normalization(fill_features, (video_info['W'], video_info['H']))
@@ -131,10 +137,10 @@ class main:
 
                     # convert filter_norm_features to filter_norm_features_tensor also put in cuda
                     filter_norm_features_tensor = torch.from_numpy(filter_norm_features).type(torch.float32)
-                    X = filter_norm_features_tensor.cuda().reshape(1, *filter_norm_features_tensor.size())
+                    data = filter_norm_features_tensor.cuda().unsqueeze(0)
 
                     # model output state
-                    output = model(X)
+                    output = model(data)
                     confidence = torch.softmax(output, dim=1)
                     idx = confidence.argmax(dim=1)[0].item()
                     choosed_confidence = confidence[0, idx]
@@ -144,7 +150,7 @@ class main:
                         state = 'unknown'
 
                     # after delivery feature_array need to clear
-                    feature_array = np.zeros([model_time_step, num_keypoint, 3], np.float32)
+                    feature_array = np.zeros([self.model_time_step, num_keypoint, 3], np.float32)
                     real_time_step = 0
                 else:
                     real_time_step += 1
@@ -181,11 +187,29 @@ class main:
         self.stream.release()
         cv2.destroyAllWindows()
 
+    def _get_model(self) -> torch.nn.Module:
+        if self.use_trt:
+            model = TRTModule()
+            pth_basedir = "trt_model"
+        else:
+            model = KeypointLSTM(input_size=30, hidden_size=64, num_layers=1, num_classes=2)
+            pth_basedir = "pt_model"
+
+        model.load_state_dict(torch.load(Path(pth_basedir, f"fall_{self.model_time_step}_fps.pth")))
+        model.eval().cuda()
+
+        logging.info(f"Model has loaded: {pth_basedir}")
+        return model
+
 
 if __name__ == '__main__':
     parse = argparse.ArgumentParser()
     parse.add_argument('--source', required=True, help='source need to process')
-    args = vars(parse.parse_args())
+    parse.add_argument("--trt", action="store_true", help="If present, use trt instead of pytorch model.")
+    args = parse.parse_args()
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
 
     selected_points = [BODY_25.Nose, BODY_25.Neck, BODY_25.RShoulder, BODY_25.RElbow, BODY_25.RWrist,
                        BODY_25.LShoulder, BODY_25.LElbow, BODY_25.LWrist, BODY_25.MidHip,
@@ -198,7 +222,7 @@ if __name__ == '__main__':
 
     print(selected_points_index)
 
-    source = args['source']
+    source = args.source
 
-    main = main(source=source)
+    main = Main(source=source, use_trt=args.trt)
     main.start()
