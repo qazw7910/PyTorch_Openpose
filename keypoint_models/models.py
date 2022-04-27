@@ -1,16 +1,21 @@
 import torch.nn as nn
 
 
-class KeypointLSTM(nn.Module):
-    # TODO num_classes=4
+class KeypointRNNBased(nn.Module):
+    lstm: nn.RNNBase
+
     def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
         super().__init__()
 
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
-                            batch_first=batch_first)  # input_size=30, hidden_size=64,
+        self.lstm = self._get_rnn_based_layer(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=batch_first
+        )
         self.drop = nn.Dropout(0.3)
         self.nn = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
@@ -19,47 +24,39 @@ class KeypointLSTM(nn.Module):
         )
 
     def forward(self, packed_input):
-        '''
+        """
         h0 = torch.rand(self.hidden_size, self.num_layers)
         c0 = torch.rand(self.hidden_size, self.num_layers)
-        '''
+        """
         packed_output, _ = self.lstm(packed_input)
 
-        output = self.drop(packed_output[:, -1])
+        output = self.drop(packed_output[:, -1] if self.lstm.batch_first else packed_output[-1])
         output = self.nn(output)
 
         return output
 
+    def _get_rnn_based_layer(self, input_size, hidden_size, num_layers, batch_first) -> nn.RNNBase:
+        raise NotImplementedError()
 
-# https://blog.csdn.net/sunny_xsc1994/article/details/82969867
 
-class KeypointGRU(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
-        super().__init__()
-
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-
-        self.gru = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
-                          batch_first=batch_first)  # input_size=30, hidden_size=64,
-        self.drop = nn.Dropout(0.3)
-        self.nn = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.Linear(hidden_size, num_classes)
-
+class KeypointLSTM(KeypointRNNBased):
+    def _get_rnn_based_layer(self, input_size, hidden_size, num_layers, batch_first) -> nn.RNNBase:
+        return nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=batch_first
         )
 
-    def forward(self, packed_input):
-        '''
-        h0 = torch.rand(self.hidden_size, self.num_layers)
-        c0 = torch.rand(self.hidden_size, self.num_layers)
-        '''
-        packed_output, _ = self.gru(packed_input)
 
-        output = self.drop(packed_output[:, -1])
-        output = self.nn(output)
-
-        return output
+class KeypointGRU(KeypointRNNBased):
+    def _get_rnn_based_layer(self, input_size, hidden_size, num_layers, batch_first) -> nn.RNNBase:
+        return nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=batch_first
+        )
 
 
 class Conv1D(nn.Module):
