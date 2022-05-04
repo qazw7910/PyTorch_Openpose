@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 import torchvision.transforms as transforms
+from matplotlib.axes import Axes
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
@@ -95,7 +96,7 @@ def train_model(model, train_loader, val_loader, test_loader, epoch):  # test lo
     plt.show()
 
     plt.clf()
-    for phase in ['train', 'val', 'test']:
+    for phase in phases:
         plt.plot(range(len(acc_history[phase])), acc_history[phase])
     plt.legend(['train', 'validation', 'test'])
     plt.xlabel('Iterations')
@@ -106,12 +107,16 @@ def train_model(model, train_loader, val_loader, test_loader, epoch):  # test lo
     for phase in phases:
         fig, ax = plt.subplots()
         im = ax.matshow(conf_mat_each_phase[phase], cmap="Blues")
+        ax: Axes
         for (x, y), val in np.ndenumerate(conf_mat_each_phase[phase]):
-            ax.text(y, x, '{:2d}'.format(val), ha='center', va='center')
-
+            ax.text(y, x, '{:.2%}'.format(val/conf_mat_each_phase[phase].sum()), ha='center', va='center')
+            ax.set_xticklabels(['','Fall', 'Normal'], fontsize='small')
+            ax.set_yticklabels(['','Fall', 'Normal'], fontsize='small')
+            ax.xaxis.tick_bottom()
+            ax.xaxis.set_inverted(True)
         plt.title(f"confusion matrix in {phase} phase")
-        plt.xlabel('prediction')
-        plt.ylabel('actual')
+        plt.xlabel('Prediction')
+        plt.ylabel('Actual')
         fig.colorbar(im)
         plt.show()
 
@@ -129,7 +134,7 @@ num_feature = 2 * len(keypoints)  # because(X,Y) so feature *2
 torch.manual_seed(0)
 
 train_transforms = transforms.Compose([Centralize(),
-                                       Scale(0.7, 1.3),
+                                       Scale(0.7, 1),
                                        RandomShift(-0.3, 0.3, -0.3, 0.3)
                                        ])  # for lstm
 
@@ -174,7 +179,7 @@ model = Keypoint_LSTM(
     num_layers=1,
     num_classes=2
 )
-res = train_model(model, train_loader, val_loader, test_loader, 10)
+res = train_model(model, train_loader, val_loader, test_loader, 300)
 print('best_val_acc:', res)
 
 torch.save(model.state_dict(), f'pt_model/fall_{time_steps}_fps.pth')
