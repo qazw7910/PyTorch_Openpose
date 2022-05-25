@@ -108,13 +108,14 @@ def train_model(model, train_loader, val_loader, test_loader, epoch):  # test lo
         fig, ax = plt.subplots()
         im = ax.matshow(conf_mat_each_phase[phase], cmap="Blues")
         ax: Axes
+        total_amount = conf_mat_each_phase[phase].sum()
         for (x, y), val in np.ndenumerate(conf_mat_each_phase[phase]):
-            ax.text(y, x, '{:.2%}'.format(val/conf_mat_each_phase[phase].sum()), ha='center', va='center')
+            ax.text(y, x, f'{val}/{total_amount}({val/total_amount:.2%})', ha='center', va='center')
             ax.set_xticklabels(['','Fall', 'Normal'], fontsize='small')
             ax.set_yticklabels(['','Fall', 'Normal'], fontsize='small')
             ax.xaxis.tick_bottom()
             ax.xaxis.set_inverted(True)
-        plt.title(f"confusion matrix in {phase} phase")
+        plt.title(f"Confusion Matrix in {phase} phase")
         plt.xlabel('Prediction')
         plt.ylabel('Actual')
         fig.colorbar(im)
@@ -179,7 +180,7 @@ model = Keypoint_LSTM(
     num_layers=1,
     num_classes=2
 )
-res = train_model(model, train_loader, val_loader, test_loader, 300)
+res = train_model(model, train_loader, val_loader, test_loader, 10)
 print('best_val_acc:', res)
 
 torch.save(model.state_dict(), f'pt_model/fall_{time_steps}_fps.pth')
