@@ -101,7 +101,7 @@ class Main:
         real_time_step = 0
         num_keypoint = 25
         feature_array = np.zeros([self.model_time_step, num_keypoint, 3], np.float32)
-        class_name = ['fall', 'stand']
+        class_name = ['Fall', 'Normal']
         state = 'unknown'
         choosed_confidence = 0
 
@@ -110,6 +110,8 @@ class Main:
         H = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
         video_info['W'] = int(W)
         video_info['H'] = int(H)
+
+        out_video = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*"mp4v"), 7.0, (int(W), int(H)))
 
         # load model and convert model to eval() mode
         model = self._get_model()
@@ -176,6 +178,7 @@ class Main:
             op_output_frame = cv2.resize(src=op_output_frame, dsize=(0, 0), fx=1, fy=1, interpolation=cv2.INTER_AREA)
 
             cv2.imshow(self.winname, op_output_frame)
+            out_video.write(op_output_frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q') or key == 27:
@@ -186,6 +189,7 @@ class Main:
         print("OpenPose demo successfully finished. Total time: " + str(end - start) + " seconds")
         self.stream.release()
         cv2.destroyAllWindows()
+        out_video.release()
 
     def _get_model(self) -> torch.nn.Module:
         if self.use_trt:
