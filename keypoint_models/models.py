@@ -1,10 +1,8 @@
-import torch
 import torch.nn as nn
-from collections import OrderedDict
 
 class Keypoint_LSTM(nn.Module):
     # TODO num_classes=4
-    def __init__(self, input_size, hidden_size, num_layers=1, num_classes=2, batch_first=True):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, batch_first=True):
         super(Keypoint_LSTM, self).__init__()
 
         self.hidden_size = hidden_size
@@ -12,25 +10,53 @@ class Keypoint_LSTM(nn.Module):
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
                             batch_first=batch_first)  #input_size=30, hidden_size=64,
-        self.drop = nn.Dropout(0.5)
-        self.nn = nn.Sequential(OrderedDict([
-            ('hidden_layer',nn.Linear(hidden_size, hidden_size)),
-            ('hidden_layer',nn.Linear(hidden_size, hidden_size)),
-            ('output_layer',nn.Linear(hidden_size, num_classes))
-        ])
+        self.drop = nn.Dropout(0.3)
+        self.nn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(hidden_size, num_classes)
         )
 
-    def forward(self, packed_input):
+    def forward(self, x):
+        """
+        h0 = torch.rand(self.hidden_size, self.num_layers)
+        c0 = torch.rand(self.hidden_size, self.num_layers)
+        """
+        x, _ = self.lstm(x)
+
+        x = self.drop(x[:, -1])
+        x = self.nn(x)
+
+        return x
+
+class Keypoint_RNN(nn.Module):
+    # TODO num_classes=4
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, batch_first=True):
+        super(Keypoint_RNN, self).__init__()
+
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
+                            batch_first=batch_first)  #input_size=30, hidden_size=64,
+        self.drop = nn.Dropout(0.3)
+        self.nn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(hidden_size, num_classes)
+        )
+
+    def forward(self, x):
         '''
         h0 = torch.rand(self.hidden_size, self.num_layers)
         c0 = torch.rand(self.hidden_size, self.num_layers)
         '''
-        packed_output, (ht, ct) = self.lstm(packed_input)
+        x, _ = self.rnn(x)
 
-        output = self.drop(packed_output[:, -1])
-        output = self.nn(output)
+        x = self.drop(x[:, -1])
+        x = self.nn(x)
 
-        return output
+        return x
 
 
 # https://blog.csdn.net/sunny_xsc1994/article/details/82969867
