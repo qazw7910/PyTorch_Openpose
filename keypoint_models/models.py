@@ -19,21 +19,22 @@ class KeypointRNNBased(nn.Module):
         self.drop = nn.Dropout(0.3)
         self.nn = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
+            nn.LeakyReLU(inplace=True),
             nn.Linear(hidden_size, num_classes)
 
         )
 
-    def forward(self, packed_input):
+    def forward(self, x):
         """
         h0 = torch.rand(self.hidden_size, self.num_layers)
         c0 = torch.rand(self.hidden_size, self.num_layers)
         """
-        packed_output, _ = self.lstm(packed_input)
+        x, _ = self.lstm(x)
 
-        output = self.drop(packed_output[:, -1] if self.lstm.batch_first else packed_output[-1])
-        output = self.nn(output)
+        x = self.drop(x[:, -1] if self.lstm.batch_first else x[-1])
+        x = self.nn(x)
 
-        return output
+        return x
 
     def _get_rnn_based_layer(self, input_size, hidden_size, num_layers, batch_first) -> nn.RNNBase:
         raise NotImplementedError()

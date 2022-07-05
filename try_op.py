@@ -12,6 +12,7 @@ import argparse
 import torch
 
 from cv2_utils import get_frame_from_cap
+from heatmap_display import HeatmapDisplay
 from keypoint_models.models import KeypointLSTM
 
 from preprocess.BODY_25 import BODY_25
@@ -78,14 +79,20 @@ class Main:
             model_folder='models',
             model_pose='BODY_25',
             frame_step=2,
-            net_resolution='256x128',
+            net_resolution='224x112',
             process_real_time='true',
             render_threshold=0.5,
-            num_gpu=op.get_gpu_number()
+            num_gpu=op.get_gpu_number(),
+            heatmaps_add_bkg=True,
+            heatmaps_add_PAFs=True,
+            heatmaps_scale=2
         )
 
+    @torch.no_grad()
     def start(self):
         cv2.namedWindow(self.winname, cv2.WINDOW_KEEPRATIO)
+        heatmap_display = HeatmapDisplay(0.3, 0.5, 64)
+        heatmap_display.initialize_tracerbars(self.winname)
         monitor = screeninfo.get_monitors()[0]
         window_width = monitor.width * 3 / 5
         cv2.resizeWindow(self.winname, int(window_width), int(window_width * monitor.height / monitor.width))
@@ -164,6 +171,12 @@ class Main:
             fps.update()
             fps.stop()
 
+            outputImageF = (datum.inputNetData[0].copy())[0, :, :, :] + 0.5
+            outputImageF = cv2.merge([outputImageF[0, :, :], outputImageF[1, :, :], outputImageF[2, :, :]])
+            outputImageF = (outputImageF * 255.).astype(dtype='uint8')
+
+            op_output_frame = heatmap_display.get_image(op_output_frame, datum.poseHeatMaps)
+
             cv2.putText(img=op_output_frame, text='NUM_GPU: {}'.format(self.num_gpus), org=(30, 50),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0), thickness=2)
             cv2.putText(img=op_output_frame, text='FPS(): {0:.2f}'.format(fps.fps()), org=(30, 90),
@@ -174,8 +187,6 @@ class Main:
             cv2.putText(img=op_output_frame, text=f'CONF: {choosed_confidence: .6f}', org=(30, 160),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 255),
                         thickness=2)
-
-            op_output_frame = cv2.resize(src=op_output_frame, dsize=(0, 0), fx=1, fy=1, interpolation=cv2.INTER_AREA)
 
             cv2.imshow(self.winname, op_output_frame)
             out_video.write(op_output_frame)

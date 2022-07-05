@@ -1,12 +1,9 @@
 import argparse
 import contextlib
-import shutil
 import time
-from io import BytesIO
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, Dict
 
-import onnx
 import torch
 from torch2trt import torch2trt, TRTModule
 
@@ -54,33 +51,40 @@ def main(args: Sequence[str] = None):
         else:
             model_trt = TRTModule()
             model_trt.load_state_dict(weights)
+        model_trt.eval()
+
+    time_record = {}
 
     with torch.no_grad():
         print("normal model: ", model)
-        with eval_time("normal"):
+        with eval_time("normal", time_record=time_record):
             y = model(x)
             for _ in range(999):
                 y += model(x)
 
         print("trt model: ", model_trt)
-        with eval_time("trt"):
+        with eval_time("trt", time_record=time_record):
             y_trt = model_trt(x)
             for _ in range(999):
                 y_trt += model_trt(x)
 
-    print(torch.max(torch.abs(y - y_trt)))
+    print(torch.sqrt(torch.sum((y - y_trt) ** 2)))
+    print(time_record['normal'] / time_record['trt'])
     print(y)
     print(y_trt)
 
     if mode == "pytorch":
-        torch.save(model_trt.state_dict(), "trt_model/fall_20_fps.pth")
+        torch.save(model_trt.state_dict(), out / pth_path.name)
 
 
 @contextlib.contextmanager
-def eval_time(name: str, log_func=print):
+def eval_time(name: str, log_func=print, time_record: Dict[str, float] = None):
     start = time.time()
     yield
-    log_func(f"execution time of {name}: {time.time() - start: .6f}")
+    duration = time.time() - start
+    log_func(f"execution time of {name}: {duration: .6f}")
+    if time_record is not None:
+        time_record[name] = duration
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
@@ -88,7 +92,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         description="Convert pytorch model to trt model and evaluate execution time of original and converted model"
     )
     parser.add_argument("original_model", type=Path)
-    parser.add_argument("trt_out", type=Path, default="trt_model")
+    parser.add_argument("-o", "--trt_out", type=Path, default="trt_model")
     parser.add_argument("-m", "--original_model_mode", type=str, default="pytorch", choices=['pytorch', 'trt'])
 
     return parser
