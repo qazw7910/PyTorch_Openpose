@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import screeninfo
+from flirpy.camera.lepton import Lepton
 from torch2trt import TRTModule
 
 # DO NOT REMOVE THIS IMPORT STATEMENT
@@ -11,7 +12,7 @@ import numpy as np
 import argparse
 import torch
 
-from cv2_utils import get_frame_from_cap
+from cv2_utils import get_frame_from_cap, get_frame_from_cam
 from heatmap_display import HeatmapDisplay
 from keypoint_models.models import KeypointLSTM
 
@@ -70,7 +71,7 @@ class Main:
     def __init__(self, source, use_trt):
         self.use_trt = use_trt
         self.op_params = self.set_op_params()
-        self.stream = cv2.VideoCapture(int(source))
+        self.source = source
         self.num_gpus = self.op_params['num_gpu']
         self.model_time_step = 20
 
@@ -79,7 +80,7 @@ class Main:
             model_folder='models',
             model_pose='BODY_25',
             frame_step=2,
-            net_resolution='224x112',
+            net_resolution='256x128',
             process_real_time='true',
             render_threshold=0.5,
             num_gpu=op.get_gpu_number(),
@@ -112,18 +113,28 @@ class Main:
         state = 'unknown'
         choosed_confidence = 0
 
+        if source == "flir":
+            cam = Lepton()
+            frame_iter = get_frame_from_cam(cam)
+            cam.setup_video("189:4")
+            cap = cam.cap
+        else:
+            cam = None
+            cap = cv2.VideoCapture(int(source))
+            frame_iter = get_frame_from_cap(cap)
+
         video_info = {}
-        W = self.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
-        H = self.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        W = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        H = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         video_info['W'] = int(W)
         video_info['H'] = int(H)
 
-        out_video = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*"mp4v"), 7.0, (int(W), int(H)))
+        out_video = cv2.VideoWriter('output1.mp4', cv2.VideoWriter_fourcc(*"mp4v"), 7.0, (int(W), int(H)))
 
         # load model and convert model to eval() mode
         model = self._get_model()
 
-        for frame in get_frame_from_cap(self.stream):
+        for frame in frame_iter:
             # catch keypoints and recognize state
             datum = op.Datum()
             datum.cvInputData = frame
@@ -191,7 +202,10 @@ class Main:
 
         end = time.time()
         print("OpenPose demo successfully finished. Total time: " + str(end - start) + " seconds")
-        self.stream.release()
+        if cam is None:
+            cap.release()
+        else:
+            cam.release()
         cv2.destroyAllWindows()
         out_video.release()
 
