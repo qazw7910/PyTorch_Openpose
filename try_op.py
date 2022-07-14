@@ -165,17 +165,10 @@ class Main:
                     real_time_step += 1
             else:
                 state = 'unknown'
-
-            op_output_frame = datum.cvOutputData
-
             fps.update()
             fps.stop()
 
-            outputImageF = (datum.inputNetData[0].copy())[0, :, :, :] + 0.5
-            outputImageF = cv2.merge([outputImageF[0, :, :], outputImageF[1, :, :], outputImageF[2, :, :]])
-            outputImageF = (outputImageF * 255.).astype(dtype='uint8')
-
-            op_output_frame = heatmap_display.get_image(op_output_frame, datum.poseHeatMaps)
+            op_output_frame = heatmap_display.get_image(datum.cvOutputData, datum.poseHeatMaps)
 
             cv2.putText(img=op_output_frame, text='NUM_GPU: {}'.format(self.num_gpus), org=(30, 50),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 0, 0), thickness=2)
