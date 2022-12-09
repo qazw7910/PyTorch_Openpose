@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import Iterator
 
 import cv2
+import flirpy.camera.core as core
+from flirpy.camera.boson import Boson
 
 
 def get_frame_from_cap(cap: cv2.VideoCapture) -> Iterator:
@@ -12,12 +14,15 @@ def get_frame_from_cap(cap: cv2.VideoCapture) -> Iterator:
         yield frame
 
 
-def main():
-    source = Path("video/IMG_3215.mp4")
-    cv2.namedWindow("frame", cv2.WINDOW_KEEPRATIO)
-    cv2.resizeWindow("frame", 1600, 900)
+def get_frame_from_cam(camera: core.Core):
+    with camera:
+        while True:
+            yield camera.grab()
 
-    for frame in get_frame_from_cap(cv2.VideoCapture(str(source))):
+
+def main():
+
+    for frame in get_frame_from_cap(cv2.VideoCapture(0)):
         cv2.imshow("frame", frame)
         cv2.waitKey(1000//30)
 
